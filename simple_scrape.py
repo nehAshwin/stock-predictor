@@ -12,27 +12,34 @@ def scrape_yahoo_finance(ticker):
     #HTTP GET request to finance.yahoo
     #headers is necessary to make client recognizable by server
     response = requests.get(url, headers=headers)
-    print(url)
-    #print(response.text)
+    
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
         table = soup.find('table')
+
         if table:
             rows = table.find_all('tr')[1:]  # Skip the header row
             data = []
+
             for row in rows:
                 cols = row.find_all('td')
+
                 if len(cols) < 6:
                     continue
+
                 date = cols[0].text
                 close_price = cols[4].text.replace(',', '')
                 data.append([date, close_price])
     
             df = pd.DataFrame(data, columns=['Date', 'Close'])
             return df
+        
         else:
             print(f"No data found for {ticker}")
+            return pd.DataFrame(columns=['Date', 'Close'])
+        
     else:
         print(f"Failed to retrieve data for {ticker}")
+        return pd.DataFrame(columns=['Date', 'Close'])
 
 print(scrape_yahoo_finance('AAPL'))
