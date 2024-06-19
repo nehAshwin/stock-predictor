@@ -1,1 +1,1 @@
-Stock Predictor
+# Left Right Center Game
