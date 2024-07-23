@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def scrape_yahoo_finance(ticker):
     # goal for later: have the user input the current date and pull 5 years from there instead of fixed 5 years (check gpt)
-    url = f'https://finance.yahoo.com/quote/{ticker}/history/?period1=1563909348&period2=1721762051'
+    url = f'https://finance.yahoo.com/quote/{ticker}/history/?period1=1090540800&period2=1721762051'
     # Add headers to mimic a browser request
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
