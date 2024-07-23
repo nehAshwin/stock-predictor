@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def scrape_yahoo_finance(ticker):
     # goal for later: have the user input the current date and pull 5 years from there instead of fixed 5 years (check gpt)
-    url = f'https://finance.yahoo.com/quote/{ticker}/history/?period1=1561659807&period2=1719511052'
+    url = f'https://finance.yahoo.com/quote/{ticker}/history/?period1=1563909348&period2=1721762051'
     # Add headers to mimic a browser request
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -31,7 +31,7 @@ def scrape_yahoo_finance(ticker):
                 date = cols[0].text
                 adj_close_price = cols[5].text.replace(',', '')
                 data.insert(0, [date, adj_close_price])
-            
+
             df = pd.DataFrame(data, columns=['Date', 'Adj Close'])
             # df['MA'] = df['Close'].rolling(5).mean()
 
@@ -53,5 +53,5 @@ def plot_graph(figsize, values, column_name):
     plt.title(f"{column_name} of Google data")
     plt.show() 
 
-# print(scrape_yahoo_finance('GOOG'))
+print(scrape_yahoo_finance('AAPL'))
 # plot_graph((15,5), scrape_yahoo_finance('GOOG')['Close'], 'Closing Price')
