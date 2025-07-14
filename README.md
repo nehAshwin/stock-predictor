@@ -22,36 +22,8 @@ A machine learning-powered web application that predicts stock prices and provid
 - **Data Source**: Yahoo Finance API
 - **Visualization**: Matplotlib
 
-## Prerequisites
-
-- Python 3.7+
-- pip package manager
-
-## Quick Start
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/stock-predictor.git
-cd stock-predictor
-```
-
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Train the Model
-```bash
-python model.py
-```
-
-### 4. Run the Web App
-```bash
-streamlit run web_stock_price.py
-```
-
-### 5. Access the App
-Open your browser and go to `http://localhost:8501`
+## Access the App
+Open your browser and go to `https://stock-predictor-7onn7zaabassngvxwcsggy.streamlit.app`
 
 ## How to Use
 
