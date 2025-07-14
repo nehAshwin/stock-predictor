@@ -1,12 +1,13 @@
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 def scrape_yahoo_finance(ticker):
 
-    # NEXT STEPS: automate the start and end times to follow user current time
-    start = 1090540800
-    end = 1721762051
+    # Set start and end times dynamically
+    start = 1090540800  # keep as earliest possible
+    end = int(datetime.now().timestamp())
 
     url = f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?period1={start}&period2={end}&interval=1d'
     
@@ -37,6 +38,7 @@ def scrape_yahoo_finance(ticker):
             # drop all missing values in data fram (apply changes to og df)
             # QUESTION: is there a better way to handle missing information?
             df.dropna(inplace=True)
+            df.sort_values('Date', ascending=False, inplace=True)  # Most recent first
             return df
         
         except (KeyError, IndexError, TypeError):
