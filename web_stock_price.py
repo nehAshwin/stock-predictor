@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from keras import models
 import matplotlib.pyplot as plt
 from datetime import datetime
 import joblib
@@ -20,7 +19,8 @@ stock_data['Date'] = pd.to_datetime(stock_data['Date'])
 stock_data.set_index('Date', inplace=True)
 stock_data['Adj Close'] = pd.to_numeric(stock_data['Adj Close'], errors='coerce')
 
-model = models.load_model("Latest_stock_price_model.keras")
+# Load the scikit-learn model
+model = joblib.load("stock_prediction_model.pkl")
 
 st.subheader("Stock Data and Moving Averages")
 col1, col2 = st.columns([1, 2])
@@ -63,21 +63,20 @@ scaler_y = joblib.load('target_scaler.save')
 X = stock_data[feature_cols].values
 X_scaled = scaler_X.transform(X)
 
-seq_len = 30
 N_FUTURE = 7  # Number of days to forecast
 
-# Rolling forecast
-last_window = X_scaled[-seq_len:].copy()
+# Simple forecasting using the last available data point
+last_features = X_scaled[-1:].copy()  # Get the most recent features
 reg_preds = []
 predicted_prices = []
 future_dates = []
-last_date = stock_data.index[0]  # Changed from [-1] to [0] since data is sorted newest first
-last_price = stock_data['Adj Close'].iloc[0]  # Changed from [-1] to [0]
+last_date = stock_data.index[0]  # Most recent date
+last_price = stock_data['Adj Close'].iloc[0]  # Most recent price
 
 for i in range(N_FUTURE):
-    input_seq = last_window.reshape(1, seq_len, -1)
-    reg_pred_scaled, _ = model.predict(input_seq)
-    reg_pred = scaler_y.inverse_transform(reg_pred_scaled)[0, 0]
+    # Predict next day's percent change
+    reg_pred_scaled = model.predict(last_features)[0]
+    reg_pred = scaler_y.inverse_transform([[reg_pred_scaled]])[0, 0]
     reg_preds.append(reg_pred)
     
     # Calculate predicted price
@@ -91,12 +90,6 @@ for i in range(N_FUTURE):
     future_dates.append(next_date)
     last_date = next_date
     last_price = predicted_price
-    
-    # Prepare next input window (simplified)
-    next_row = last_window[-1].copy()
-    next_row[feature_cols.index('Adj Close')] = scaler_X.transform([[predicted_price] + [0]*(len(feature_cols)-1)])[0][0]
-    next_row[feature_cols.index('Percent Change')] = scaler_X.transform([[0, 0, reg_pred] + [0]*(len(feature_cols)-3)])[0][2]
-    last_window = np.vstack([last_window[1:], next_row])
 
 # Calculate predicted moving averages
 ma_100_pred = []
@@ -153,7 +146,7 @@ st.pyplot(fig2)
 
 # Investment insights
 st.subheader('Investment Insights')
-latest_price = stock_data['Adj Close'].iloc[0]  # Changed from [-1] to [0]
+latest_price = stock_data['Adj Close'].iloc[0]  # Most recent price
 predicted_end_price = predicted_prices[-1]
 total_return = (predicted_end_price - latest_price) / latest_price * 100
 
@@ -174,7 +167,7 @@ else:
 
 # Moving average analysis
 if len(ma_100_pred) > 0 and not np.isnan(ma_100_pred[-1]):
-    current_ma100 = stock_data['Moving Avg'].iloc[0]  # Changed from [-1] to [0]
+    current_ma100 = stock_data['Moving Avg'].iloc[0]  # Most recent MA
     pred_ma100 = ma_100_pred[-1]
     if predicted_end_price > pred_ma100:
         st.info("✅ **MA Analysis**: Predicted price above 100-day moving average - potential support level")

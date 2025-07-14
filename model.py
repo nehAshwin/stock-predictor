@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from keras import Input, Model
-from keras.layers import LSTM, Dense, Dropout
-from keras.callbacks import EarlyStopping
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 import joblib
 from web_scrape import scrape_yahoo_finance, plot_graph
 
@@ -57,77 +56,48 @@ def main():
     ]
     df.dropna(subset=feature_cols, inplace=True)
 
-    # Multi-output labels
+    # Target variable
     df['Next_Percent_Change'] = df['Percent Change'].shift(-1)
-    df['Next_Direction'] = (df['Next_Percent_Change'] > 0).astype(int)
-    df.dropna(subset=['Next_Percent_Change', 'Next_Direction'], inplace=True)
+    df.dropna(subset=['Next_Percent_Change'], inplace=True)
 
-    # Prepare features and labels
+    # Prepare features and target
     X = df[feature_cols].values
-    y_reg = df['Next_Percent_Change'].values.reshape(-1, 1)
-    y_clf = df['Next_Direction'].values.reshape(-1, 1)
+    y = df['Next_Percent_Change'].values
 
     # Scale features
     scaler_X = MinMaxScaler()
     X_scaled = scaler_X.fit_transform(X)
     scaler_y = MinMaxScaler()
-    y_reg_scaled = scaler_y.fit_transform(y_reg)
-
-    # Sequence data for LSTM
-    seq_len = 30
-    X_seq, y_reg_seq, y_clf_seq = [], [], []
-    for i in range(seq_len, len(X_scaled)):
-        X_seq.append(X_scaled[i-seq_len:i])
-        y_reg_seq.append(y_reg_scaled[i])
-        y_clf_seq.append(y_clf[i])
-    X_seq, y_reg_seq, y_clf_seq = np.array(X_seq), np.array(y_reg_seq), np.array(y_clf_seq)
+    y_scaled = scaler_y.fit_transform(y.reshape(-1, 1)).flatten()
 
     # Train/test split
-    split = int(len(X_seq) * 0.7)
-    X_train, X_test = X_seq[:split], X_seq[split:]
-    y_reg_train, y_reg_test = y_reg_seq[:split], y_reg_seq[split:]
-    y_clf_train, y_clf_test = y_clf_seq[:split], y_clf_seq[split:]
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.3, random_state=42)
 
-    # Build multi-output model
-    input_layer = Input(shape=(seq_len, X_seq.shape[2]))
-    x = LSTM(64, return_sequences=True)(input_layer)
-    x = Dropout(0.3)(x)
-    x = LSTM(32)(x)
-    x = Dropout(0.3)(x)
-    # Regression head
-    reg_head = Dense(16, activation='relu')(x)
-    reg_out = Dense(1, name='reg_out')(reg_head)
-    # Classification head
-    clf_head = Dense(16, activation='relu')(x)
-    clf_out = Dense(1, activation='sigmoid', name='clf_out')(clf_head)
-    model = Model(inputs=input_layer, outputs=[reg_out, clf_out])
-    model.compile(
-        optimizer='adam',
-        loss={'reg_out': 'mse', 'clf_out': 'binary_crossentropy'},
-        metrics={'reg_out': 'mae', 'clf_out': 'accuracy'}
-    )
-    es = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    history = model.fit(
-        X_train, {'reg_out': y_reg_train, 'clf_out': y_clf_train},
-        validation_split=0.2,
-        epochs=50,
-        batch_size=32,
-        callbacks=[es],
-        verbose=2
-    )
+    # Build Random Forest model
+    model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+    model.fit(X_train, y_train)
+
     # Evaluate
-    results = model.evaluate(X_test, {'reg_out': y_reg_test, 'clf_out': y_clf_test}, verbose=2)
-    print('Test loss/MAE/Accuracy:', results)
+    train_score = model.score(X_train, y_train)
+    test_score = model.score(X_test, y_test)
+    print(f'Train R² Score: {train_score:.4f}')
+    print(f'Test R² Score: {test_score:.4f}')
+
     # Predict
-    reg_pred_scaled, clf_pred = model.predict(X_test)
-    reg_pred = scaler_y.inverse_transform(reg_pred_scaled)
+    y_pred_scaled = model.predict(X_test)
+    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+    y_test_actual = scaler_y.inverse_transform(y_test.reshape(-1, 1)).flatten()
+
+    # Calculate RMSE
+    rmse = np.sqrt(np.mean((y_pred - y_test_actual)**2))
+    print(f'RMSE: {rmse:.6f}')
+
     # Save model and scalers
-    model.save('Latest_stock_price_model.keras')
+    joblib.dump(model, 'stock_prediction_model.pkl')
     joblib.dump(scaler_X, 'feature_scaler.save')
     joblib.dump(scaler_y, 'target_scaler.save')
-    # Optionally plot
-    # plotting_data = pd.DataFrame({'reg_pred': reg_pred.reshape(-1), 'clf_pred': clf_pred.reshape(-1)}, index=df.index[split+seq_len:])
-    # plot_graph((15,6), plotting_data, 'Predictions')
+    
+    print("Model and scalers saved successfully!")
 
 if __name__ == '__main__':
     main()
